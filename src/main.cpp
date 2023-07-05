@@ -2,6 +2,8 @@
 
 #include <TFT_eSPI.h>
 #include "vehicleSprites.h"
+#include <gauge.h>
+#include <test.h>
 
 #include <Wire.h>
 
@@ -15,7 +17,17 @@ ezButton button(13);
 TFT_eSPI lcd = TFT_eSPI();
 TFT_eSprite canvas = TFT_eSprite(&lcd);
 TFT_eSprite vehicleSide   = TFT_eSprite(&lcd); // Sprite object for dial
-//TFT_eSprite vehicleRear   = TFT_eSprite(&lcd); // Sprite object for dial
+TFT_eSprite vehicleRear   = TFT_eSprite(&lcd); // Sprite object for dial
+
+
+
+GaugeFace gauge(lcd);
+
+gauge.drawCircle(); //here is where im getting the error : "this declaration has no storage class or type specifier"
+
+
+//v.changeValue(2);
+
 
 //Set the CS pins for each individual screen
 int firstScreenCS = 17;
@@ -24,18 +36,21 @@ int secondScreenCS = 18;
 int disp = 1;
 int maxdisp = 4;
 
+int wheelX = 24;
+int wheelY = 48;
+
 void createVehicleSide(){
-  vehicleSide.createSprite(vehicleRear_w, vehicleRear_h);
-  vehicleSide.setPivot(vehicleRear_w >> 1, 10);
+  vehicleSide.createSprite(vehicleSide_w, vehicleSide_h);
+  vehicleSide.setPivot(wheelX, wheelY);
   vehicleSide.fillSprite(TFT_BLACK);
 }
 
 void createVehicleRear(){
-  /*
+  
   vehicleRear.createSprite(vehicleRear_w, vehicleRear_h);
   vehicleRear.setPivot(vehicleRear_w >> 1, vehicleRear_h);
   vehicleRear.fillSprite(TFT_BLACK);
-  */
+  
 }
 
 char velocityUnits[] = "MPH";
@@ -76,19 +91,19 @@ void setup() {
   canvas.fillSprite(TFT_BLACK);
   lcd.startWrite();
 
-  lcd.setPivot(120,120);
-
+  lcd.setPivot(0,120);
+  //canvas.setPivot(120 + (wheelX - (vehicleSide_w/2)), 120 + (wheelY-vehicleSide_h));
 
   createVehicleSide();
-  //createVehicleRear();
+  createVehicleRear();
   
   vehicleSide.setSwapBytes(true);
-  vehicleSide.pushImage(0,0,vehicleRear_w,vehicleRear_h,vehicle_rear);
+  vehicleSide.pushImage(0,0,vehicleSide_w,vehicleSide_h,vehicle_side);
 
-  /*
+  
   vehicleRear.setSwapBytes(true);
   vehicleRear.pushImage(0,0,vehicleRear_w,vehicleRear_h,vehicle_rear);
-  */
+  
 }
 
 float angle = 0;
@@ -156,7 +171,7 @@ void speedometerHorizon() { // A really fancy retro speedometer with a moving gr
 
 void InclinometerPitch() {
   //UPDATE
-  angle = a.y;
+  angle =  a.y;
   
   //if (int(angle) != int(previousAngle)) {
 
@@ -166,15 +181,37 @@ void InclinometerPitch() {
   canvas.drawString(str, 120-(str.length()*12), 200, 6);
 
   //draw angle difference indicator
+  /*
   canvas.drawLine(0,120,240,120,TFT_RED); //Zero Degree Line
   for (int i=0; i<(240/lineSpacing); i++) { 
     canvas.drawLine((i*lineSpacing),  120 - (tan(degToRad(angle))*(120-i*lineSpacing)),  (i*lineSpacing),  120,  TFT_RED);
   }
+  */
 
   // Draw car
-  vehicleSide.pushRotated(&canvas, int16_t(angle), uint32_t (0x0000));
-    
+  vehicleRear.pushRotated(&canvas, int16_t(angle), uint32_t (0x39C7));
+  canvas.drawLine(0,120,240,120,TFT_WHITE); //Zero Degree Line
+  
+  //canvas.drawLine(120*cos(degToRad(angle))+120, 120*sin(degToRad(angle))+120, -120*cos(degToRad(angle))+120, -120*sin(degToRad(angle))+120, TFT_WHITE);
+}
+
+void MotorcycleLean() {
+  angle = a.x;
+
+  canvas.setTextDatum(MC_DATUM);
+  
+  vehicleRear.pushRotated(&canvas, 0, uint32_t (0x39C7));
+  if ((angle > 45.0f) || (angle < -45.0f)) {
+    canvas.drawLine(120*cos(degToRad(angle))+120, 120*sin(degToRad(angle))+120, -120*cos(degToRad(angle))+120, -120*sin(degToRad(angle))+120, TFT_RED);
+    canvas.setTextColor(TFT_RED);
+    canvas.drawString("YO CHILL", canvas.width() >> 1, 20, 2);
+  } else {
   canvas.drawLine(120*cos(degToRad(angle))+120, 120*sin(degToRad(angle))+120, -120*cos(degToRad(angle))+120, -120*sin(degToRad(angle))+120, TFT_WHITE);
+  canvas.setTextColor(TFT_WHITE);
+  }
+
+  String str = String(int(-angle));
+  canvas.drawString(str, canvas.width() >> 1, 210, 6);
 }
 
 /*
@@ -264,11 +301,11 @@ void drawAltimeter(float x,float y) {
 void drawUpdate() {
   canvas.fillSprite(TFT_BLACK); // Start with a black screen
 
-  speedometerHorizon();
+  //speedometerHorizon();
   //drawGauge(canvas.width() >> 1, canvas.height() >> 1, 110,10,45,315,6,4,TFT_WHITE);
   //drawNeedle(canvas.width() >> 1, canvas.height() >> 1, 100, TFT_BLUE);
   //drawAltimeter(canvas.width() >> 1, canvas.height() >> 1);
-  //InclinometerPitch();
+  MotorcycleLean();
   
   canvas.pushSprite(2, 2);
   /* FOR SCREEN SWITCHING
