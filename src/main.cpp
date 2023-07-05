@@ -23,7 +23,7 @@ TFT_eSprite vehicleRear   = TFT_eSprite(&lcd); // Sprite object for dial
 
 GaugeFace gauge(lcd);
 
-gauge.drawCircle(); //here is where im getting the error : "this declaration has no storage class or type specifier"
+//gauge.drawCircle();
 
 
 //v.changeValue(2);
