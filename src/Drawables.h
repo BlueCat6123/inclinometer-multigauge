@@ -660,23 +660,75 @@ class Turbo : public Drawable {
         float radius;
         float turbineRadius;
 
+        float value;
+        float minValue;
+        float maxValue;
+
         float angle;
 
+        float turbineAngle;
+
+        int padding;
+
     public:
-        Turbo(int _x, int _y, float _radius, float _turbineRadius, float _angle) : x(_x), y(_y), radius(_radius), turbineRadius(_turbineRadius), angle(_angle) { ; }
+        Turbo(int _x, int _y, float _radius, float _turbineRadius, float _angle) : x(_x), y(_y), radius(_radius), turbineRadius(_turbineRadius), angle(_angle) { 
+            padding = 4; 
+            value = 0;
+            minValue = 0;
+            maxValue = 2;
+            turbineAngle = 0;
+        }
 
         void draw(TFT_eSprite* canvas) override {
-            canvas->drawCircle(x,y,turbineRadius, TFT_WHITE);
-            float ang = asin(turbineRadius/radius) * 57.2958;
-            canvas->drawArc(x,y,radius,radius-1,360 - (90 + ang),360,TFT_WHITE,TFT_WHITE,false);
-            canvas->drawArc(x,y,radius,radius-1,0,180,TFT_WHITE,TFT_WHITE,false);
+
+            float width = sqrt( -pow(turbineRadius,2) + pow(radius,2)) + 20;
+
+            float totalLength = 2*PI*turbineRadius + (width-padding);
+            float percentage = (value - minValue) / (maxValue - minValue);
+            float displayLength = lerp(0, totalLength, percentage);
+
+            float displayAngle = displayLength/turbineRadius * 57.2958;
+
+            canvas->fillCircle(x,y,radius, TFT_BLACK); //Background
+
+            canvas->drawCircle(x,y,turbineRadius, TFT_WHITE); // Inner circle outline
+
+            canvas->drawCircle(x,y,radius,TFT_WHITE); //Outer circle outlin
 
             //canvas->drawRect(x, y-radius, 80,radius-turbineRadius,TFT_WHITE);
             float _angle = degToRad(angle - 90);
             float _angle2 = degToRad(angle);
-            canvas->drawLine(x + cos(_angle)*radius, y + sin(_angle)*radius,   x + cos(_angle)*radius + cos(_angle2)*80, y + sin(_angle)*radius + sin(_angle2)*80,TFT_WHITE);
-            canvas->drawLine(x + cos(_angle)*turbineRadius, y + sin(_angle)*turbineRadius,   x + cos(_angle)*turbineRadius + cos(_angle2)*80, y + sin(_angle)*turbineRadius + sin(_angle2)*80,TFT_WHITE);
+
+
+            canvas->drawArc(x,y,radius - padding, turbineRadius + padding, 180,constrain(180 + displayAngle,180,360),TFT_WHITE,TFT_WHITE,false);
+
+            canvas->fillRect(x + cos(_angle)*radius, y + sin(_angle)*radius, width, radius-turbineRadius,TFT_BLACK); //cover start of arc
+
+            canvas->drawArc(x,y,radius - padding, turbineRadius + padding, 0,constrain(displayAngle-180,0,180),TFT_WHITE,TFT_WHITE,false);
+            canvas->fillRect(x + cos(_angle)*radius, y + sin(_angle)*(radius-padding), constrain(displayLength - 2*PI*turbineRadius, 0,width), (radius-turbineRadius-padding*2),TFT_WHITE);
+
+            canvas->drawLine(x + cos(_angle)*radius, y + sin(_angle)*radius,   x + cos(_angle)*radius + cos(_angle2)*width, y + sin(_angle)*radius + sin(_angle2)*width,TFT_WHITE);
+            canvas->drawLine(x + cos(_angle)*turbineRadius, y + sin(_angle)*turbineRadius,   x + cos(_angle)*turbineRadius + cos(_angle2)*width, y + sin(_angle)*turbineRadius + sin(_angle2)*width,TFT_WHITE);
+            canvas->drawLine(x + cos(_angle)*radius + cos(_angle2)*width, y + sin(_angle)*radius + sin(_angle2)*width,   x + cos(_angle)*turbineRadius + cos(_angle2)*width, y + sin(_angle)*turbineRadius + sin(_angle2)*width,TFT_WHITE);
+
+            turbineAngle += percentage * 13;
+
+            //Draw the fan
+            int blades = 6;
+            for (int i = 0; i < blades; i++) {
+                double cosAngle, sinAngle;
+                sincos(degToRad((360/blades) * i + turbineAngle), &sinAngle, &cosAngle);
+                
+                canvas->drawLine(x + cosAngle * 5, y + sinAngle * 5,   x + cosAngle * (turbineRadius - padding), y + sinAngle * (turbineRadius - padding), TFT_WHITE);
+            }
+            canvas->drawCircle(x, y, 5, TFT_WHITE);
+
+            canvas->setTextDatum(BR_DATUM);
+            canvas->drawString(String(int(value*8)) + "PSI", x + cos(_angle)*radius + width, y + sin(_angle)*radius - padding, 2);
+
         }
+
+        void setValue(float _value) { value = _value; }
 };
 
 class Horizon : public Drawable {
